@@ -1,16 +1,10 @@
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect, render
 
-from blog.forms import CommentForm, PostForm, UserForm
-from blog.models import Category, Comment, Post, User
-from .constants import POSTS_PER_PAGE
-
-
-def paginate_query(request, queryset, per_page=POSTS_PER_PAGE):
-    """Возвращает пагинированные данные для переданного запроса."""
-    return Paginator(queryset, per_page).get_page(request.GET.get('page'))
+from .forms import CommentForm, PostForm, UserForm
+from .models import Category, Comment, Post, User
+from .utils import paginate_query
 
 
 def index(request):
@@ -110,7 +104,7 @@ def add_comment(request, post_id):
     Добавляет новый комментарий к посту.
     Доступно только авторизованным пользователям.
     """
-    form = CommentForm(request.POST)
+    form = CommentForm(request.POST or None, instance=request.user)
     if form.is_valid():
         comment = form.save(commit=False)
         comment.author = request.user
