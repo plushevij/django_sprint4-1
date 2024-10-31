@@ -1,10 +1,9 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import CommentForm, PostForm, UserForm
 from .models import Category, Comment, Post, User
-from .utils import paginate_query
+from .utils import paginate_query, check_author
 
 
 def index(request):
@@ -37,7 +36,10 @@ def category_posts(request, category_slug):
 @login_required
 def create_post(request):
     """Создает новый пост. Доступна только авторизованным пользователям."""
-    form = PostForm(request.POST or None, files=request.FILES or None,)
+    form = PostForm(
+        request.POST or None,
+        files=request.FILES or None,
+    )
     if form.is_valid():
         post = form.save(commit=False)
         post.author = request.user
@@ -52,26 +54,31 @@ def edit_post(request, post_id):
     Пользователь должен быть автором поста.
     """
     instance = get_object_or_404(Post, id=post_id)
-    if instance.author != request.user:
-        return redirect('blog:post_detail', post_id=post_id)
-    form = PostForm(request.POST or None, files=request.FILES or None,
-                    instance=instance)
-    if form.is_valid():
-        form.save()
+    if check_author(request, Post, id=post_id) is True:
+        form = PostForm(request.POST or None,
+                        files=request.FILES or None,
+                        instance=instance)
+        if form.is_valid():
+            form.save()
+            return redirect('blog:post_detail', post_id)
+        return render(request, 'blog/create.html', {'form': form})
+    else:
         return redirect('blog:post_detail', post_id)
-    return render(request, 'blog/create.html', {'form': form})
 
 
 def delete_post(request, post_id):
     """Удаляет пост. Пользователь должен быть автором поста."""
-    instance = get_object_or_404(Post, pk=post_id)
-    if instance.author != request.user:
+    instance = get_object_or_404(Post, id=post_id)
+    if check_author(request, Post, id=post_id) is True:
+        form = PostForm(request.POST or None,
+                        files=request.FILES or None,
+                        instance=instance)
+        if request.method == 'POST':
+            instance.delete()
+            return redirect('blog:profile', username=request.user.username)
+        return render(request, 'blog/create.html', {'form': form})
+    else:
         return redirect('blog:post_detail', post_id)
-    form = PostForm(instance=instance)
-    if request.method == 'POST':
-        instance.delete()
-        return redirect('blog:profile', username=request.user.username)
-    return render(request, 'blog/create.html', {'form': form})
 
 
 def profile(request, username):
@@ -104,7 +111,7 @@ def add_comment(request, post_id):
     Добавляет новый комментарий к посту.
     Доступно только авторизованным пользователям.
     """
-    form = CommentForm(request.POST or None, instance=request.user)
+    form = CommentForm(request.POST or None)
     if form.is_valid():
         comment = form.save(commit=False)
         comment.author = request.user
@@ -120,23 +127,25 @@ def edit_comment(request, post_id, comment_id):
     Пользователь должен быть автором комментария.
     """
     comment = get_object_or_404(Comment, pk=comment_id)
-    if comment.author != request.user:
+    if check_author(request, Comment, id=comment_id) is True:
+        form = CommentForm(request.POST or None, instance=comment)
+        context = {'form': form, 'comment': comment}
+        if form.is_valid():
+            form.save()
+            return redirect('blog:post_detail', post_id)
+        return render(request, 'blog/comment.html', context)
+    else:
         return redirect('blog:post_detail', post_id)
-    form = CommentForm(request.POST or None, instance=comment)
-    context = {'form': form, 'comment': comment}
-    if form.is_valid():
-        form.save()
-        return redirect('blog:post_detail', post_id)
-    return render(request, 'blog/comment.html', context)
 
 
 @login_required
 def delete_comment(request, post_id, comment_id):
     """Удаляет комментарий. Пользователь должен быть автором комментария."""
     comment = get_object_or_404(Comment, pk=comment_id)
-    if comment.author != request.user:
+    if check_author(request, Comment, id=comment_id) is True:
+        if request.method == 'POST':
+            comment.delete()
+            return redirect('blog:post_detail', post_id)
+        return render(request, 'blog/comment.html', {'comment': comment})
+    else:
         return redirect('blog:post_detail', post_id)
-    if request.method == 'POST':
-        comment.delete()
-        return redirect('blog:post_detail', post_id)
-    return render(request, 'blog/comment.html', {'comment': comment})
