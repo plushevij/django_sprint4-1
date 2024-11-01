@@ -54,7 +54,8 @@ def edit_post(request, post_id):
     Пользователь должен быть автором поста.
     """
     instance = get_object_or_404(Post, id=post_id)
-    if check_author(request, Post, id=post_id) is None:
+    author_post_check = check_author(request, Post, id=post_id)
+    if author_post_check is None:
         form = PostForm(request.POST or None,
                         files=request.FILES or None,
                         instance=instance)
@@ -62,13 +63,14 @@ def edit_post(request, post_id):
             form.save()
             return redirect('blog:post_detail', post_id)
         return render(request, 'blog/create.html', {'form': form})
-    return check_author(request, Post, id=post_id)
+    return author_post_check
 
 
 def delete_post(request, post_id):
     """Удаляет пост. Пользователь должен быть автором поста."""
     instance = get_object_or_404(Post, id=post_id)
-    if check_author(request, Post, id=post_id) is None:
+    author_post_check = check_author(request, Post, id=post_id)
+    if author_post_check is None:
         form = PostForm(request.POST or None,
                         files=request.FILES or None,
                         instance=instance)
@@ -76,7 +78,7 @@ def delete_post(request, post_id):
             instance.delete()
             return redirect('blog:profile', username=request.user.username)
         return render(request, 'blog/create.html', {'form': form})
-    return check_author(request, Post, id=post_id)
+    return author_post_check
 
 
 def profile(request, username):
@@ -125,23 +127,25 @@ def edit_comment(request, post_id, comment_id):
     Пользователь должен быть автором комментария.
     """
     comment = get_object_or_404(Comment, pk=comment_id)
-    if check_author(request, Comment, id=comment_id) is None:
+    author_comment_check = check_author(request, Comment, id=comment_id)
+    if author_comment_check is None:
         form = CommentForm(request.POST or None, instance=comment)
         context = {'form': form, 'comment': comment}
         if form.is_valid():
             form.save()
             return redirect('blog:post_detail', post_id)
         return render(request, 'blog/comment.html', context)
-    return check_author(request, Comment, id=comment_id)
+    return author_comment_check
 
 
 @login_required
 def delete_comment(request, post_id, comment_id):
     """Удаляет комментарий. Пользователь должен быть автором комментария."""
     comment = get_object_or_404(Comment, pk=comment_id)
-    if check_author(request, Comment, id=comment_id) is None:
+    author_comment_check = check_author(request, Comment, id=comment_id)
+    if author_comment_check is None:
         if request.method == 'POST':
             comment.delete()
             return redirect('blog:post_detail', post_id)
         return render(request, 'blog/comment.html', {'comment': comment})
-    return check_author(request, Comment, id=comment_id)
+    return author_comment_check
