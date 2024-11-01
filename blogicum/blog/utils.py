@@ -13,4 +13,4 @@ def check_author(request, model, id):
     instance = get_object_or_404(model, id=id)
     if instance.author != request.user:
         return redirect('blog:post_detail', post_id=id)
-    return True
+    return None
