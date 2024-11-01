@@ -62,7 +62,7 @@ def edit_post(request, post_id):
             form.save()
             return redirect('blog:post_detail', post_id)
         return render(request, 'blog/create.html', {'form': form})
-    return redirect('blog:post_detail', post_id)
+    return check_author(request, Post, id=post_id)
 
 
 def delete_post(request, post_id):
@@ -76,7 +76,7 @@ def delete_post(request, post_id):
             instance.delete()
             return redirect('blog:profile', username=request.user.username)
         return render(request, 'blog/create.html', {'form': form})
-    return redirect('blog:post_detail', post_id)
+    return check_author(request, Post, id=post_id)
 
 
 def profile(request, username):
@@ -132,7 +132,7 @@ def edit_comment(request, post_id, comment_id):
             form.save()
             return redirect('blog:post_detail', post_id)
         return render(request, 'blog/comment.html', context)
-    return redirect('blog:post_detail', post_id)
+    return check_author(request, Comment, id=comment_id)
 
 
 @login_required
@@ -144,4 +144,4 @@ def delete_comment(request, post_id, comment_id):
             comment.delete()
             return redirect('blog:post_detail', post_id)
         return render(request, 'blog/comment.html', {'comment': comment})
-    return redirect('blog:post_detail', post_id)
+    return check_author(request, Comment, id=comment_id)
